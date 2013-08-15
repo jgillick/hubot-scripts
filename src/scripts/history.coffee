@@ -69,7 +69,7 @@ module.exports = (robot) ->
   robot.hear /(.*)/i, (msg) ->
     if msg.match[1] != ''
       user = msg.message.user
-      room = msg.message.room
+      room = msg.message.room || false
       historyentry = new HistoryEntry(user.name, msg.match[1], room)
       history.add historyentry
 
@@ -86,7 +86,7 @@ module.exports = (robot) ->
     msg.send "Ok, I'm clearing the history."
     history.clear()
 
-  # Show history HTML
+  # Show history HTMLg
   robot.router.get '/history', (req, res) ->
     query = querystring.parse(req._parsedUrl.query)
     res.setHeader( 'content-type', 'text/html' );
@@ -98,7 +98,7 @@ module.exports = (robot) ->
     # Room
     room = query.room
     roomTitle = "all rooms"
-    if room
+    if room is not undefined
       roomTitle = room
 
     #
@@ -108,10 +108,11 @@ module.exports = (robot) ->
     lastUser = false
     for i in [history.cache.length - 1..0] by -1
       message = history.cache[i]
+      user = message.user
       time = moment(message.time).fromNow()
 
       # Is this the same user as the last row
-      sameUser = (lastUser == message.user)
+      sameUser = (lastUser == user)
 
       # From the correct room?
       if room and room != message.room
@@ -125,9 +126,9 @@ module.exports = (robot) ->
       roomEncoded = encodeURIComponent(message.room)
       roomHtmlLink = ""
       if !room
-        if !message.room
+        if message.room is false
           roomHtmlLink = "<span class='room to-bot'>#{robot.name}</span>"
-        else
+        else if message.room != undefined
           roomHtmlLink = "<span class='room'><a href='/history/?room=#{roomEncoded}''>#{message.room}</a></span>"
 
 
@@ -139,7 +140,7 @@ module.exports = (robot) ->
       # Don't include duplicate user
       userHTML = ""
       if !sameUser
-        userHTML = "<dt class='#{className}''>#{message.user}</dt>"
+        userHTML = "<dt class='#{className}''>#{user}</dt>"
 
       # List
       listHtml += """
@@ -152,10 +153,10 @@ module.exports = (robot) ->
       """
 
       # Longest user name
-      if message.user.length > longestName and message.user.length < 15
-        longestName = message.user.length
+      if user and user.length > longestName and user.length < 15
+        longestName = user.length
 
-      lastUser = message.user;
+      lastUser = user;
     #
     # Build entire HTML page
     #
